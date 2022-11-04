@@ -1,4 +1,3 @@
-
 import argparse
 import sys
 import json
@@ -6,7 +5,7 @@ import urllib.request
 
 
 parser = argparse.ArgumentParser(prog = 'OsintTry',formatter_class=argparse.RawDescriptionHelpFormatter,
-                                description = '''OsintTry 1.0\n\nCheck a tryhackme api user to see the completed rooms.\nSet a user "-u" and output "-o" to analyze it with the flag file "-f"''',
+                                description = '''OsintTry 1.0.1\n\nCheck a tryhackme api user to see the completed rooms.\nSet a user "-u" and output "-o" to analyze it with the flag file "-f"''',
                                 epilog = '''Example:\t python OsintTry.py -u W4tson -o w4tsonrooms.txt\n\t\t python OsintTry.py -f w4tsonrooms.txt -y 2022 -m 9''')
 parser.add_argument('-u', '--user',help='Extract info from the user') 
 parser.add_argument('-o', '--outfile',nargs='?', type=argparse.FileType('w'),help='Output the user info to a file') 
@@ -20,8 +19,8 @@ args = parser.parse_args()
 if args.file:
   dataClean=args.file.readlines()
   dataClean=dataClean[0]
+  dataClean = dataClean.replace("\'", "\"")
   dataClean=json.loads(dataClean)
-  dataClean=dataClean['data']
 
 elif args.user and args.outfile:
   url = 'https://tryhackme.com/api/user/activity-events?username='+args.user
@@ -29,11 +28,18 @@ elif args.user and args.outfile:
 
   response = urllib.request.urlopen(req)
   webContent = response.read().decode('UTF-8')
-  dataClean=json.loads(webContent)
-  dataClean=dataClean['data']
-  dataClean=sorted(dataClean,key=lambda d: (d['_id']['year'],d['_id']['month'],d['_id']['day']), reverse=False)
-  args.outfile.write(webContent) 
-  
+  outFile=json.loads(webContent)
+  outFile=outFile['data']
+  dataClean=sorted(outFile,key=lambda d: (d['_id']['year'],d['_id']['month'],d['_id']['day']), reverse=False)
+  args.outfile.write(str(dataClean)) 
+
+elif args.user or args.outfile:
+  if not args.user:
+    print('Error: Use -u flag\n')
+  if not args.outfile:
+    print('Error: Use -o flag\n')
+  parser.print_help()
+  exit(1)
 else:
   parser.print_help()
   exit(1)
@@ -69,7 +75,8 @@ for i in range(len(dataClean)):
   else:
     if dataClean[i]["_id"]["action"]=="complete-room":
       sumRooms(dataClean[i])
-      
+
+print('----------------')    
 print('Rooms completed:',completedlabs)
 if dateMaxRooms!='':
-  print('Max rooms:',maxRooms,'in',dateMaxRooms)
+  print('Maximum rooms in a day:',maxRooms,'on',dateMaxRooms)
